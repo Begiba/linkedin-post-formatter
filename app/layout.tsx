@@ -1,4 +1,5 @@
 import { Analytics } from "@vercel/analytics/next";
+import AnalyticsEvents from "./components/AnalyticsEvents";
 import './globals.css';
 
 export const metadata = {
@@ -34,7 +35,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body>
         {children}
         {/* Vercel Analytics tracks page views & custom events */}
-        <Analytics />
+        <AnalyticsEvents /> {/* Global events tracker */}
+        <Analytics /> {/* Vercel Analytics component */}  
       </body>
     </html>
   );
