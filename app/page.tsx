@@ -1,65 +1,131 @@
-import Image from "next/image";
+"use client";
 
-export default function Home() {
+import { useState, useRef } from "react";
+import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Bold, Italic, Copy, Hash, Smile, RotateCcw } from "lucide-react";
+
+// Unicode maps that LinkedIn preserves after paste
+const boldMap: Record<string, string> = {
+  a: "𝗮", b: "𝗯", c: "𝗰", d: "𝗱", e: "𝗲", f: "𝗳", g: "𝗴", h: "𝗵", i: "𝗶", j: "𝗷",
+  k: "𝗸", l: "𝗹", m: "𝗺", n: "𝗻", o: "𝗼", p: "𝗽", q: "𝗾", r: "𝗿", s: "𝘀",
+  t: "𝘁", u: "𝘂", v: "𝘃", w: "𝘄", x: "𝘅", y: "𝘆", z: "𝘇",
+};
+
+const italicMap: Record<string, string> = {
+  a: "𝘢", b: "𝘣", c: "𝘤", d: "𝘥", e: "𝘦", f: "𝘧", g: "𝘨", h: "𝘩", i: "𝘪", j: "𝘫",
+  k: "𝘬", l: "𝘭", m: "𝘮", n: "𝘯", o: "𝘰", p: "𝘱", q: "𝘲", r: "𝘳", s: "𝘴",
+  t: "𝘵", u: "𝘶", v: "𝘷", w: "𝘸", x: "𝘹", y: "𝘺", z: "𝘻",
+};
+
+const monoMap: Record<string, string> = {
+  a: "𝚊", b: "𝚋", c: "𝚌", d: "𝚍", e: "𝚎", f: "𝚏", g: "𝚐", h: "𝚑", i: "𝚒", j: "𝚓",
+  k: "𝚔", l: "𝚕", m: "𝚖", n: "𝚗", o: "𝚘", p: "𝚙", q: "𝚚", r: "𝚛", s: "𝚜",
+  t: "𝚝", u: "𝚞", v: "𝚟", w: "𝚠", x: "𝚡", y: "𝚢", z: "𝚣",
+};
+
+const emojis = ["🔥", "🚀", "💡", "⭐", "✅", "⚡", "🤯", "👏", "🎯"];
+
+function transform(text: string, map: Record<string, string>) {
+  return text
+    .split("")
+    .map((c) => map[c.toLowerCase()] ?? c)
+    .join("");
+}
+
+export default function LinkedInPostFormatter() {
+  const editorRef = useRef<HTMLTextAreaElement | null>(null);
+  const [copied, setCopied] = useState(false);
+  const [text, setText] = useState("");
+  const [showEmojis, setShowEmojis] = useState(false);
+
+  const applyFormat = (map: Record<string, string>) => {
+    const el = editorRef.current;
+    if (!el) return;
+
+    const start = el.selectionStart;
+    const end = el.selectionEnd;
+    if (start === end) return;
+
+    const selected = text.slice(start, end);
+    const formatted = transform(selected, map);
+    const next = text.slice(0, start) + formatted + text.slice(end);
+
+    setText(next);
+    requestAnimationFrame(() => {
+      el.focus();
+      el.setSelectionRange(start, start + formatted.length);
+    });
+  };
+
+  const insertEmoji = (emoji: string) => {
+    setText((prev) => prev + emoji);
+    setShowEmojis(false);
+  };
+
+  const addHashtags = () => {
+    setText((prev) => prev + "\n\n#technology #softwareengineering #ai");
+  };
+
+  const reset = () => setText("");
+
+  const copyToClipboard = async () => {
+    await navigator.clipboard.writeText(text);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  const charCount = text.length;
+  const hashtagCount = (text.match(/#/g) || []).length;
+
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex min-h-screen w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
+    <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
+      <Card className="w-full max-w-3xl shadow-lg">
+        <CardContent className="p-6 space-y-4">
+          <h1 className="text-xl font-semibold">LinkedIn Post Formatter</h1>
+          <p className="text-sm text-muted-foreground">
+            Creator tools optimized for LinkedIn reach.
           </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
+
+          <div className="flex flex-wrap gap-2">
+            <Button size="sm" variant="outline" onClick={() => applyFormat(boldMap)} title="Unicode Bold"><Bold size={16} /></Button>
+            <Button size="sm" variant="outline" onClick={() => applyFormat(italicMap)} title="Unicode Italic"><Italic size={16} /></Button>
+            <Button size="sm" variant="outline" onClick={() => applyFormat(monoMap)} title="Monospace">Mono</Button>
+            <Button size="sm" variant="outline" onClick={addHashtags} title="Add hashtags"><Hash size={16} /></Button>
+            <Button size="sm" variant="outline" onClick={() => setShowEmojis((v) => !v)} title="Emoji picker"><Smile size={16} /></Button>
+            <Button size="sm" variant="outline" onClick={reset} title="Reset"><RotateCcw size={16} /></Button>
+          </div>
+
+          {showEmojis && (
+            <div className="flex gap-2 flex-wrap">
+              {emojis.map((e) => (
+                <button key={e} onClick={() => insertEmoji(e)} className="text-xl">{e}</button>
+              ))}
+            </div>
+          )}
+
+          <textarea
+            ref={editorRef}
+            value={text}
+            onChange={(e) => setText(e.target.value)}
+            className="min-h-[260px] w-full border rounded-md p-4 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            placeholder="Write your LinkedIn post here..."
+          />
+
+          <div className="flex justify-between text-sm text-muted-foreground">
+            <span>{charCount} characters · {hashtagCount} hashtags</span>
+            <span className={charCount > 210 ? "text-orange-600" : ""}>
+              {charCount > 210 ? "‘See more’ will appear" : "Below LinkedIn fold"}
+            </span>
+          </div>
+
+          <div className="flex justify-end">
+            <Button onClick={copyToClipboard} className="flex gap-2">
+              <Copy size={16} /> {copied ? "Copied!" : "Copy for LinkedIn"}
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }
