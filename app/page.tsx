@@ -1,11 +1,10 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Bold, Italic, Copy, Hash, Smile, RotateCcw } from "lucide-react";
 
-// Unicode maps that LinkedIn preserves after paste
 const boldMap: Record<string, string> = {
   a: "𝗮", b: "𝗯", c: "𝗰", d: "𝗱", e: "𝗲", f: "𝗳", g: "𝗴", h: "𝗵", i: "𝗶", j: "𝗷",
   k: "𝗸", l: "𝗹", m: "𝗺", n: "𝗻", o: "𝗼", p: "𝗽", q: "𝗾", r: "𝗿", s: "𝘀",
@@ -39,24 +38,23 @@ export default function LinkedInPostFormatter() {
   const [text, setText] = useState("");
   const [showEmojis, setShowEmojis] = useState(false);
 
-  const applyFormat = (map: Record<string, string>) => {
-    const el = editorRef.current;
-    if (!el) return;
+  const applyFormat = useCallback((map: Record<string, string>) => {
+  const el = editorRef.current;
+  if (!el) return;
 
-    const start = el.selectionStart;
-    const end = el.selectionEnd;
-    if (start === end) return;
+  const start = el.selectionStart ?? text.length;
+  const end = el.selectionEnd ?? text.length;
 
-    const selected = text.slice(start, end);
-    const formatted = transform(selected, map);
-    const next = text.slice(0, start) + formatted + text.slice(end);
+  const selected = text.slice(start, end);
+  const formatted = transform(selected, map);
+  const next = text.slice(0, start) + formatted + text.slice(end);
 
-    setText(next);
-    requestAnimationFrame(() => {
-      el.focus();
-      el.setSelectionRange(start, start + formatted.length);
-    });
-  };
+  setText(next);
+  requestAnimationFrame(() => {
+    el.focus();
+    el.setSelectionRange(start, start + formatted.length);
+  });
+}, [text]);
 
   const insertEmoji = (emoji: string) => {
     const el = editorRef.current;
@@ -91,6 +89,33 @@ export default function LinkedInPostFormatter() {
 
   const charCount = text.length;
   const hashtagCount = (text.match(/#/g) || []).length;
+
+  // Keyboard shortcuts
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (!e.ctrlKey && !e.metaKey) return;
+
+      switch (e.key.toLowerCase()) {
+        case 'b':
+          e.preventDefault();
+          applyFormat(boldMap);
+          break;
+        case 'i':
+          e.preventDefault();
+          applyFormat(italicMap);
+          break;
+        case 'm':
+          e.preventDefault();
+          applyFormat(monoMap);
+          break;
+        default:
+          break;
+      }
+    };
+
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [applyFormat]);
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
