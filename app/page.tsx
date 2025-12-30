@@ -5,6 +5,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Bold, Italic, Copy, Hash, Smile, RotateCcw } from "lucide-react";
 
+
 // Unicode maps that LinkedIn preserves after paste
 const boldMap: Record<string, string> = {
   a: "𝗮", b: "𝗯", c: "𝗰", d: "𝗱", e: "𝗲", f: "𝗳", g: "𝗴", h: "𝗵", i: "𝗶", j: "𝗷",
