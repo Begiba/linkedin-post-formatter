@@ -17,10 +17,10 @@ const templates = [
 ];
 
 const emojiCategories: Record<string, string[]> = {
-  People: ["😀","😎","🤯","👏","❤️"],
-  Objects: ["💡","🚀","⭐","🔥","✅","⚡"],
-  Nature: ["🌳","🌸","🌞","🌈","🍀"],
-  Food: ["🍕","🍔","🍣","🍎","🍩"]
+  People: ["😀", "😎", "🤯", "👏", "❤️"],
+  Objects: ["💡", "🚀", "⭐", "🔥", "✅", "⚡"],
+  Nature: ["🌳", "🌸", "🌞", "🌈", "🍀"],
+  Food: ["🍕", "🍔", "🍣", "🍎", "🍩"]
 };
 
 export default function LinkedInPostFormatter() {
@@ -88,6 +88,57 @@ export default function LinkedInPostFormatter() {
     setTimeout(() => setCopied(false), 2000);
   };
 
+  const exportMarkdown = () => {
+    const blob = new Blob([text], { type: "text/markdown" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = "linkedin_post.md";
+    link.click();
+    URL.revokeObjectURL(url);
+    track('export_markdown');
+  };
+
+  const exportPDF = async () => {
+    if (!editorRef.current) return;
+    const html2pdf = (await import('html2pdf.js')).default;
+
+    // Create a temporary clean container
+    const tempContainer = document.createElement('div');
+    tempContainer.style.backgroundColor = darkMode ? '#1f2937' : '#ffffff';
+    tempContainer.style.color = darkMode ? '#f9fafb' : '#111827';
+    tempContainer.style.fontFamily = 'sans-serif';
+    tempContainer.style.padding = '20px';
+    tempContainer.style.width = '800px';
+    tempContainer.style.whiteSpace = 'pre-wrap';
+    tempContainer.style.lineHeight = '1.5';
+    tempContainer.style.fontSize = '16px';
+
+    // Use textContent to avoid inherited styles
+    tempContainer.textContent = text;
+
+    // Append to body
+    document.body.appendChild(tempContainer);
+
+    html2pdf()
+      .set({
+        margin: 0.5,
+        filename: 'linkedin_post.pdf',
+        html2canvas: {
+          scale: 2,
+          useCORS: true,
+          allowTaint: true,
+          backgroundColor: darkMode ? '#1f2937' : '#ffffff',
+          ignoreElements: (el) => el.tagName === 'STYLE' || el.tagName === 'LINK'
+        }
+      })
+      .from(tempContainer)
+      .save()
+      .finally(() => document.body.removeChild(tempContainer));
+
+    track('export_pdf');
+  };
+
   const charCount = text.length;
   const hashtagCount = (text.match(/#/g) || []).length;
 
@@ -153,6 +204,10 @@ export default function LinkedInPostFormatter() {
             placeholder="Write your LinkedIn post here..."
           />
 
+          <div className="flex gap-2 mt-2">
+            <Button size="sm" variant="outline" onClick={exportMarkdown}>Export .MD</Button>
+            <Button size="sm" variant="outline" onClick={exportPDF}>Export PDF</Button>
+          </div>
           <div className="flex justify-between text-sm text-muted-foreground">
             <span>{charCount} characters · {hashtagCount} hashtags</span>
             <span className={charCount > 210 ? "text-orange-600" : ""}>{charCount > 210 ? "‘See more’ will appear" : "Below LinkedIn fold"}</span>
