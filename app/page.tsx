@@ -4,6 +4,7 @@ import { useState, useRef, useCallback, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Bold, Italic, Copy, Hash, Smile, RotateCcw } from "lucide-react";
+import { track } from "@vercel/analytics";
 
 const boldMap: Record<string, string> = {
   a: "𝗮", b: "𝗯", c: "𝗰", d: "𝗱", e: "𝗲", f: "𝗳", g: "𝗴", h: "𝗵", i: "𝗶", j: "𝗷",
@@ -39,22 +40,22 @@ export default function LinkedInPostFormatter() {
   const [showEmojis, setShowEmojis] = useState(false);
 
   const applyFormat = useCallback((map: Record<string, string>) => {
-  const el = editorRef.current;
-  if (!el) return;
+    const el = editorRef.current;
+    if (!el) return;
 
-  const start = el.selectionStart ?? text.length;
-  const end = el.selectionEnd ?? text.length;
+    const start = el.selectionStart ?? text.length;
+    const end = el.selectionEnd ?? text.length;
 
-  const selected = text.slice(start, end);
-  const formatted = transform(selected, map);
-  const next = text.slice(0, start) + formatted + text.slice(end);
+    const selected = text.slice(start, end);
+    const formatted = transform(selected, map);
+    const next = text.slice(0, start) + formatted + text.slice(end);
 
-  setText(next);
-  requestAnimationFrame(() => {
-    el.focus();
-    el.setSelectionRange(start, start + formatted.length);
-  });
-}, [text]);
+    setText(next);
+    requestAnimationFrame(() => {
+      el.focus();
+      el.setSelectionRange(start, start + formatted.length);
+    });
+  }, [text]);
 
   const insertEmoji = (emoji: string) => {
     const el = editorRef.current;
@@ -73,10 +74,12 @@ export default function LinkedInPostFormatter() {
     });
 
     setShowEmojis(false);
+    track('insert_emoji', { emoji }); // <- new event
   };
 
   const addHashtags = () => {
     setText((prev) => prev + "\n\n#technology #softwareengineering #ai");
+    track('add_hashtags'); // <- new event tracking
   };
 
   const reset = () => setText("");
@@ -84,6 +87,7 @@ export default function LinkedInPostFormatter() {
   const copyToClipboard = async () => {
     await navigator.clipboard.writeText(text);
     setCopied(true);
+    track('copy_post'); // <- new event tracking
     setTimeout(() => setCopied(false), 2000);
   };
 
@@ -127,9 +131,9 @@ export default function LinkedInPostFormatter() {
           </p>
 
           <div className="flex flex-wrap gap-2">
-            <Button size="sm" variant="outline" onClick={() => applyFormat(boldMap)} title="Unicode Bold"><Bold size={16} /></Button>
-            <Button size="sm" variant="outline" onClick={() => applyFormat(italicMap)} title="Unicode Italic"><Italic size={16} /></Button>
-            <Button size="sm" variant="outline" onClick={() => applyFormat(monoMap)} title="Monospace">Mono</Button>
+            <Button size="sm" variant="outline" onClick={() => {applyFormat(boldMap); track('format_bold');}} title="Unicode Bold"><Bold size={16} /></Button>
+            <Button size="sm" variant="outline" onClick={() => {applyFormat(italicMap); track('format_italic');}} title="Unicode Italic"><Italic size={16} /></Button>
+            <Button size="sm" variant="outline" onClick={() => {applyFormat(monoMap); track('format_mono');}} title="Monospace">Mono</Button>
             <Button size="sm" variant="outline" onClick={addHashtags} title="Add hashtags"><Hash size={16} /></Button>
             <Button size="sm" variant="outline" onClick={() => setShowEmojis((v) => !v)} title="Emoji picker"><Smile size={16} /></Button>
             <Button size="sm" variant="outline" onClick={reset} title="Reset"><RotateCcw size={16} /></Button>
@@ -163,6 +167,10 @@ export default function LinkedInPostFormatter() {
               <Copy size={16} /> {copied ? "Copied!" : "Copy for LinkedIn"}
             </Button>
           </div>
+          <div className="mt-4 text-xs text-muted-foreground text-right">
+            Built by <a href="https://github.com/YOUR_USERNAME" className="underline hover:text-blue-600" target="_blank" rel="noreferrer">BegiBa</a>
+          </div>
+
         </CardContent>
       </Card>
     </div>
