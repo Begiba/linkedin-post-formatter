@@ -123,3 +123,9 @@
     @apply bg-background text-foreground;
   }
 }
+
+.editor:empty::before {
+  content: attr(data-placeholder);
+  color: #9ca3af; /* gray-400 */
+  pointer-events: none;
+}

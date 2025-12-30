@@ -3,7 +3,7 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Bold, Italic, Copy, Hash, RotateCcw } from "lucide-react";
+// import { Bold, Italic, Copy, Hash, RotateCcw } from "lucide-react";
 import { track } from "@vercel/analytics";
 
 const boldMap: Record<string, string> = { a: "𝗮", b: "𝗯", c: "𝗰", d: "𝗱", e: "𝗲", f: "𝗳", g: "𝗴", h: "𝗵", i: "𝗶", j: "𝗷", k: "𝗸", l: "𝗹", m: "𝗺", n: "𝗻", o: "𝗼", p: "𝗽", q: "𝗾", r: "𝗿", s: "𝘀", t: "𝘁", u: "𝘂", v: "𝘃", w: "𝘄", x: "𝘅", y: "𝘆", z: "𝘇" };
@@ -24,7 +24,7 @@ const emojiCategories: Record<string, string[]> = {
 };
 
 export default function LinkedInPostFormatter() {
-  const editorRef = useRef<HTMLTextAreaElement | null>(null);
+  const editorRef = useRef<HTMLDivElement | null>(null);
   const [text, setText] = useState("");
   const [copied, setCopied] = useState(false);
   const [showEmojis, setShowEmojis] = useState(false);
@@ -47,29 +47,33 @@ export default function LinkedInPostFormatter() {
   const applyFormat = useCallback((map: Record<string, string>) => {
     const el = editorRef.current;
     if (!el) return;
-    const start = el.selectionStart ?? text.length;
-    const end = el.selectionEnd ?? text.length;
-    const selected = text.slice(start, end);
-    const formatted = selected.split("").map(c => map[c.toLowerCase()] ?? c).join("");
-    const next = text.slice(0, start) + formatted + text.slice(end);
-    setText(next);
-    requestAnimationFrame(() => {
-      el.focus();
-      el.setSelectionRange(start, start + formatted.length);
-    });
-  }, [text]);
+    const selection = window.getSelection();
+    if (!selection || selection.rangeCount === 0) return;
+    const range = selection.getRangeAt(0);
+    const selectedText = range.toString();
+    const formatted = selectedText.split("").map(c => map[c.toLowerCase()] ?? c).join("");
+
+
+    range.deleteContents();
+    range.insertNode(document.createTextNode(formatted));
+
+
+    setText(el.innerText);
+  }, []);
 
   const insertEmoji = (emoji: string) => {
     const el = editorRef.current;
     if (!el) return;
-    const start = el.selectionStart ?? text.length;
-    const end = el.selectionEnd ?? text.length;
-    const next = text.slice(0, start) + emoji + text.slice(end);
-    setText(next);
-    requestAnimationFrame(() => {
-      el.focus();
-      el.setSelectionRange(start + emoji.length, start + emoji.length);
-    });
+    const selection = window.getSelection();
+    const range = selection?.getRangeAt(0);
+    if (range) {
+      range.deleteContents();
+      range.insertNode(document.createTextNode(emoji));
+      range.collapse(false);
+      selection?.removeAllRanges();
+      selection?.addRange(range);
+      setText(el.innerText);
+    }
     setShowEmojis(false);
     track('insert_emoji', { emoji });
   };
@@ -79,7 +83,13 @@ export default function LinkedInPostFormatter() {
     track('add_hashtags');
   };
 
-  const reset = () => setText("");
+  const reset = () => {
+    const el = editorRef.current;
+    if (el) {
+      el.innerText = '';
+      setText('');
+    }
+  };
 
   const copyToClipboard = async () => {
     await navigator.clipboard.writeText(text);
@@ -103,7 +113,7 @@ export default function LinkedInPostFormatter() {
     if (!editorRef.current) return;
     const html2pdf = (await import('html2pdf.js')).default;
 
-    // Create a temporary clean container
+
     const tempContainer = document.createElement('div');
     tempContainer.style.backgroundColor = darkMode ? '#1f2937' : '#ffffff';
     tempContainer.style.color = darkMode ? '#f9fafb' : '#111827';
@@ -113,31 +123,52 @@ export default function LinkedInPostFormatter() {
     tempContainer.style.whiteSpace = 'pre-wrap';
     tempContainer.style.lineHeight = '1.5';
     tempContainer.style.fontSize = '16px';
-
-    // Use textContent to avoid inherited styles
     tempContainer.textContent = text;
 
-    // Append to body
+
     document.body.appendChild(tempContainer);
 
+
     html2pdf()
-      .set({
-        margin: 0.5,
-        filename: 'linkedin_post.pdf',
-        html2canvas: {
-          scale: 2,
-          useCORS: true,
-          allowTaint: true,
-          backgroundColor: darkMode ? '#1f2937' : '#ffffff',
-          ignoreElements: (el) => el.tagName === 'STYLE' || el.tagName === 'LINK'
-        }
-      })
+      .set({ margin: 0.5, filename: 'linkedin_post.pdf', html2canvas: { scale: 2, useCORS: true, allowTaint: true, backgroundColor: darkMode ? '#1f2937' : '#ffffff' } })
       .from(tempContainer)
       .save()
       .finally(() => document.body.removeChild(tempContainer));
 
+
     track('export_pdf');
   };
+
+  const exec = (command: string) => {
+    const el = editorRef.current;
+    if (!el) return;
+    el.focus();
+
+    // Ensure cursor exists
+    const selection = window.getSelection();
+    const hasValidSelection =
+      selection &&
+      selection.rangeCount > 0 &&
+      el.contains(selection.anchorNode);
+
+      if (!hasValidSelection) {
+      const range = document.createRange();
+      range.selectNodeContents(el);
+      range.collapse(false);
+
+      selection?.removeAllRanges();
+      selection?.addRange(range);
+    }
+
+    document.execCommand(command);
+    setText(el.innerText); // update state
+  };
+
+  const categoryButtonClass = (cat: string) =>
+    `px-2 py-1 rounded ${selectedCategory === cat
+      ? "bg-blue-500 text-white"
+      : "bg-gray-200 dark:bg-gray-700"
+    }`;
 
   const charCount = text.length;
   const hashtagCount = (text.match(/#/g) || []).length;
@@ -150,6 +181,8 @@ export default function LinkedInPostFormatter() {
         case 'b': e.preventDefault(); applyFormat(boldMap); track('format_bold'); break;
         case 'i': e.preventDefault(); applyFormat(italicMap); track('format_italic'); break;
         case 'm': e.preventDefault(); applyFormat(monoMap); track('format_mono'); break;
+        case 'z': e.preventDefault(); exec('undo'); break;
+        case 'y': e.preventDefault(); exec('redo'); break;
       }
     };
     window.addEventListener('keydown', handler);
@@ -169,6 +202,10 @@ export default function LinkedInPostFormatter() {
             <Button size="sm" variant="outline" onClick={() => { applyFormat(monoMap); track('format_mono'); }} title="Monospace">Mono</Button>
             <Button size="sm" variant="outline" onClick={addHashtags} title="Add hashtags">#</Button>
             <Button size="sm" variant="outline" onClick={() => setShowEmojis(v => !v)} title="Emoji picker">😊</Button>
+            <Button size="sm" onClick={() => exec('undo')}>Undo</Button>
+            <Button size="sm" onClick={() => exec('redo')}>Redo</Button>
+            <Button size="sm" onMouseDown={(e) => e.preventDefault()} onClick={() => exec('insertUnorderedList')}>• List</Button>
+            <Button size="sm" onMouseDown={(e) => e.preventDefault()} onClick={() => exec('insertOrderedList')}>1. List</Button>
             <Button size="sm" variant="outline" onClick={reset} title="Reset">⟳</Button>
             <Button size="sm" variant="outline" onClick={toggleDarkMode} title="Toggle Dark Mode">{darkMode ? "🌙" : "☀️"}</Button>
           </div>
@@ -185,7 +222,7 @@ export default function LinkedInPostFormatter() {
             <>
               <div className="flex gap-2 mt-2 flex-wrap">
                 {Object.keys(emojiCategories).map(cat => (
-                  <button key={cat} className={`px-2 py-1 rounded ${selectedCategory === cat ? "bg-blue-500 text-white" : "bg-gray-200 dark:bg-gray-700"}`} onClick={() => setSelectedCategory(cat)}>{cat}</button>
+                  <button key={cat} className={categoryButtonClass(cat)} onClick={() => setSelectedCategory(cat)}>{cat}</button>
                 ))}
               </div>
               <div className="grid grid-cols-8 gap-2 mt-2">
@@ -196,13 +233,16 @@ export default function LinkedInPostFormatter() {
             </>
           )}
 
-          <textarea
+          <div
             ref={editorRef}
-            value={text}
-            onChange={e => setText(e.target.value)}
-            className="min-h-[260px] w-full border rounded-md p-4 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-black dark:bg-gray-700 dark:text-white"
-            placeholder="Write your LinkedIn post here..."
-          />
+            contentEditable
+            suppressContentEditableWarning
+            className="editor w-full min-h-[260px] p-4 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-700 dark:text-white mt-2"
+            onInput={(e: React.FormEvent<HTMLDivElement>) =>
+              setText((e.currentTarget).innerText)
+            }
+            data-placeholder="Write your LinkedIn post here..."
+          ></div>
 
           <div className="flex gap-2 mt-2">
             <Button size="sm" variant="outline" onClick={exportMarkdown}>Export .MD</Button>
