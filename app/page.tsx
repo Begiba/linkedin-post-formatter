@@ -5,7 +5,6 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Bold, Italic, Copy, Hash, Smile, RotateCcw } from "lucide-react";
 
-
 // Unicode maps that LinkedIn preserves after paste
 const boldMap: Record<string, string> = {
   a: "𝗮", b: "𝗯", c: "𝗰", d: "𝗱", e: "𝗲", f: "𝗳", g: "𝗴", h: "𝗵", i: "𝗶", j: "𝗷",
@@ -60,7 +59,21 @@ export default function LinkedInPostFormatter() {
   };
 
   const insertEmoji = (emoji: string) => {
-    setText((prev) => prev + emoji);
+    const el = editorRef.current;
+    if (!el) return;
+
+    const start = el.selectionStart ?? text.length;
+    const end = el.selectionEnd ?? text.length;
+
+    const next = text.slice(0, start) + emoji + text.slice(end);
+    setText(next);
+
+    requestAnimationFrame(() => {
+      el.focus();
+      const pos = start + emoji.length;
+      el.setSelectionRange(pos, pos);
+    });
+
     setShowEmojis(false);
   };
 
