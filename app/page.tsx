@@ -202,10 +202,10 @@ export default function LinkedInPostFormatter() {
             <Button size="sm" variant="outline" onClick={() => { applyFormat(monoMap); track('format_mono'); }} title="Monospace">Mono</Button>
             <Button size="sm" variant="outline" onClick={addHashtags} title="Add hashtags">#</Button>
             <Button size="sm" variant="outline" onClick={() => setShowEmojis(v => !v)} title="Emoji picker">😊</Button>
-            <Button size="sm" onClick={() => exec('undo')}>Undo</Button>
-            <Button size="sm" onClick={() => exec('redo')}>Redo</Button>
-            <Button size="sm" onMouseDown={(e) => e.preventDefault()} onClick={() => exec('insertUnorderedList')}>• List</Button>
-            <Button size="sm" onMouseDown={(e) => e.preventDefault()} onClick={() => exec('insertOrderedList')}>1. List</Button>
+            <Button size="sm" variant="outline" onClick={() => exec('undo')}>Undo</Button>
+            <Button size="sm" variant="outline" onClick={() => exec('redo')}>Redo</Button>
+            <Button size="sm" variant="outline" onMouseDown={(e) => e.preventDefault()} onClick={() => exec('insertOrderedList')}>• List</Button>
+            <Button size="sm" variant="outline" onMouseDown={(e) => e.preventDefault()} onClick={() => exec('insertOrderedList')}>1. List</Button>
             <Button size="sm" variant="outline" onClick={reset} title="Reset">⟳</Button>
             <Button size="sm" variant="outline" onClick={toggleDarkMode} title="Toggle Dark Mode">{darkMode ? "🌙" : "☀️"}</Button>
           </div>
@@ -237,7 +237,7 @@ export default function LinkedInPostFormatter() {
             ref={editorRef}
             contentEditable
             suppressContentEditableWarning
-            className="editor w-full min-h-[260px] p-4 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-700 dark:text-white mt-2"
+            className="editor"
             onInput={(e: React.FormEvent<HTMLDivElement>) =>
               setText((e.currentTarget).innerText)
             }
