@@ -1,14 +1,13 @@
 "use client";
 
-import { useState, useRef, useCallback, useEffect } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-// import { Bold, Italic, Copy, Hash, RotateCcw } from "lucide-react";
+import { Bold, Italic, Underline, Copy, List, ListOrdered, SquarePen, Eye, Undo, Redo, RotateCw } from "lucide-react";
+import Image from 'next/image'
+import avatar from '../public/avatar.png';
 import { track } from "@vercel/analytics";
-
-const boldMap: Record<string, string> = { a: "𝗮", b: "𝗯", c: "𝗰", d: "𝗱", e: "𝗲", f: "𝗳", g: "𝗴", h: "𝗵", i: "𝗶", j: "𝗷", k: "𝗸", l: "𝗹", m: "𝗺", n: "𝗻", o: "𝗼", p: "𝗽", q: "𝗾", r: "𝗿", s: "𝘀", t: "𝘁", u: "𝘂", v: "𝘃", w: "𝘄", x: "𝘅", y: "𝘆", z: "𝘇" };
-const italicMap: Record<string, string> = { a: "𝘢", b: "𝘣", c: "𝘤", d: "𝘥", e: "𝘦", f: "𝘧", g: "𝘨", h: "𝘩", i: "𝘪", j: "𝘫", k: "𝘬", l: "𝘭", m: "𝘮", n: "𝘯", o: "𝘰", p: "𝘱", q: "𝘲", r: "𝘳", s: "𝘴", t: "𝘵", u: "𝘶", v: "𝘷", w: "𝘸", x: "𝘹", y: "𝘺", z: "𝘻" };
-const monoMap: Record<string, string> = { a: "𝚊", b: "𝚋", c: "𝚌", d: "𝚍", e: "𝚎", f: "𝚏", g: "𝚐", h: "𝚑", i: "𝚒", j: "𝚓", k: "𝚔", l: "𝚕", m: "𝚖", n: "𝚗", o: "𝚘", p: "𝚙", q: "𝚚", r: "𝚛", s: "𝚜", t: "𝚝", u: "𝚞", v: "𝚟", w: "𝚠", x: "𝚡", y: "𝚢", z: "𝚣" };
+import { monoMap, boldStyle, italicStyle } from "./components/BoldMap";
 
 const templates = [
   { title: "Weekly Learnings", content: "This week I learned some amazing lessons:\n1. \n2. \n3. \n#learning #growth" },
@@ -23,9 +22,11 @@ const emojiCategories: Record<string, string[]> = {
   Food: ["🍕", "🍔", "🍣", "🍎", "🍩"]
 };
 
-export default function LinkedInPostFormatter() {
+
+export default function LinkedInPostEditor() {
   const editorRef = useRef<HTMLDivElement | null>(null);
   const [text, setText] = useState("");
+  const [previewMode, setPreviewMode] = useState(false);
   const [copied, setCopied] = useState(false);
   const [showEmojis, setShowEmojis] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState("People");
@@ -34,6 +35,37 @@ export default function LinkedInPostFormatter() {
     if (saved) document.documentElement.classList.add("dark");
     return saved;
   });
+  const underlineChar = "\u0332";
+
+  useEffect(() => {
+    const el = editorRef.current;
+    if (!el) return;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        document.execCommand("insertText", false, "\n");
+        console.log('Enter key pressed');
+      }
+    };
+
+    el.addEventListener("keydown", handleKeyDown);
+    return () => { el.removeEventListener("keydown", handleKeyDown) };
+  }, []);
+
+  useEffect(() => {
+    const el = editorRef.current;
+    if (!el) return;
+
+    const onPaste = (e: ClipboardEvent) => {
+      e.preventDefault();
+      const text = e.clipboardData?.getData("text/plain") || "";
+      document.execCommand("insertText", false, text);
+    };
+
+    el.addEventListener("paste", onPaste);
+    return () => el.removeEventListener("paste", onPaste);
+  }, []);
 
   const toggleDarkMode = () => {
     setDarkMode((prev) => {
@@ -44,22 +76,111 @@ export default function LinkedInPostFormatter() {
     });
   };
 
-  const applyFormat = useCallback((map: Record<string, string>) => {
+  const normalizeEditor = () => {
     const el = editorRef.current;
     if (!el) return;
+
+    const text = el.innerText; // flattens divs → \n
+    el.innerText = text;
+  };
+
+  const isFormattedText = (
+    text: string,
+    reverseMap: Record<string, string>
+  ) => {
+    for (const ch of text) {
+      if (reverseMap[ch]) return true;
+    }
+    return false;
+  };
+
+  const transformText = (
+    text: string,
+    map: Record<string, string>,
+    reverseMap: Record<string, string>
+  ) => {
+    const shouldApply = !isFormattedText(text, reverseMap);
+
+    return [...text].map(char => {
+      if (shouldApply) {
+        return map[char] ?? char;
+      }
+      return reverseMap[char] ?? char;
+    }).join("");
+  };
+
+
+  const applyFormat = (
+    map: Record<string, string>,
+    reverseMap: Record<string, string>
+  ) => {
+    const el = editorRef.current;
+    if (!el) return;
+
     const selection = window.getSelection();
     if (!selection || selection.rangeCount === 0) return;
     const range = selection.getRangeAt(0);
-    const selectedText = range.toString();
-    const formatted = selectedText.split("").map(c => map[c.toLowerCase()] ?? c).join("");
-
+    const selectedText = selection.toString();
+    const formatted = transformText(selectedText, map, reverseMap);
+    // const formatted = selectedText
+    //   .split(/\r?\n/)
+    //   .map(line =>
+    //     [...line].map(c => map[c] ?? c).join("")
+    //   )
+    //   .join("\n");
 
     range.deleteContents();
-    range.insertNode(document.createTextNode(formatted));
-
+    const node = document.createTextNode(formatted);
+    range.insertNode(node);
 
     setText(el.innerText);
-  }, []);
+
+    // Restore cursor
+    range.setStartAfter(node);
+    range.collapse(false);
+    selection.removeAllRanges();
+    selection.addRange(range);
+  };
+
+  const toggleUnderline = (text: string) => {
+    const hasUnderline = text.includes(underlineChar);
+
+    if (hasUnderline) {
+      return text.replaceAll(underlineChar, "");
+    }
+
+    return [...text].map(c =>
+      c === "\n" ? c : c + underlineChar
+    ).join("");
+  };
+
+  const applyUnderline = () => {
+    const selection = window.getSelection();
+    if (!selection || selection.rangeCount === 0) return;
+
+    const text = selection.toString();
+    const range = selection.getRangeAt(0);
+
+    range.deleteContents();
+    range.insertNode(
+      document.createTextNode(toggleUnderline(text))
+    );
+  };
+
+  const applyBulletList = () => {
+    const el = editorRef.current;
+    if (!el) return;
+
+    const selection = window.getSelection();
+    const text = selection?.toString() || "";
+
+    const lines = text.split("\n");
+    const formatted = lines.map(l => `• ${l}`).join("\n");
+
+    const range = selection?.getRangeAt(0);
+    range?.deleteContents();
+    range?.insertNode(document.createTextNode(formatted));
+  };
 
   const insertEmoji = (emoji: string) => {
     const el = editorRef.current;
@@ -83,19 +204,24 @@ export default function LinkedInPostFormatter() {
     track('add_hashtags');
   };
 
+  // Auto-resize editor
+  const autoResize = (el: HTMLDivElement) => {
+    el.style.height = "auto";
+    el.style.height = el.scrollHeight + "px";
+  };
+
+  const categoryButtonClass = (cat: string) =>
+    `px-2 py-1 rounded ${selectedCategory === cat
+      ? "bg-blue-500 text-white"
+      : "bg-gray-200 dark:bg-gray-700"
+    }`;
+
   const reset = () => {
     const el = editorRef.current;
     if (el) {
       el.innerText = '';
       setText('');
     }
-  };
-
-  const copyToClipboard = async () => {
-    await navigator.clipboard.writeText(text);
-    setCopied(true);
-    track('copy_post');
-    setTimeout(() => setCopied(false), 2000);
   };
 
   const exportMarkdown = () => {
@@ -139,75 +265,168 @@ export default function LinkedInPostFormatter() {
     track('export_pdf');
   };
 
+  // Exec command (bold, italic, lists, etc.)
   const exec = (command: string) => {
     const el = editorRef.current;
     if (!el) return;
     el.focus();
 
-    // Ensure cursor exists
     const selection = window.getSelection();
     const hasValidSelection =
       selection &&
       selection.rangeCount > 0 &&
       el.contains(selection.anchorNode);
 
-      if (!hasValidSelection) {
+    if (!hasValidSelection) {
       const range = document.createRange();
       range.selectNodeContents(el);
       range.collapse(false);
-
       selection?.removeAllRanges();
       selection?.addRange(range);
     }
 
+    // Prevent execCommand errors in TypeScript
+    // @ts-expected-error
     document.execCommand(command);
-    setText(el.innerText); // update state
+    track('format_' + command);
   };
 
-  const categoryButtonClass = (cat: string) =>
-    `px-2 py-1 rounded ${selectedCategory === cat
-      ? "bg-blue-500 text-white"
-      : "bg-gray-200 dark:bg-gray-700"
-    }`;
+  // Copy text for LinkedIn
+  const copyToClipboard = async () => {
+    if (!editorRef.current) return;
+    await navigator.clipboard.writeText(editorRef.current.innerText);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
 
   const charCount = text.length;
   const hashtagCount = (text.match(/#/g) || []).length;
 
-  // Keyboard shortcuts
-  useEffect(() => {
-    const handler = (e: KeyboardEvent) => {
-      if (!e.ctrlKey && !e.metaKey) return;
-      switch (e.key.toLowerCase()) {
-        case 'b': e.preventDefault(); applyFormat(boldMap); track('format_bold'); break;
-        case 'i': e.preventDefault(); applyFormat(italicMap); track('format_italic'); break;
-        case 'm': e.preventDefault(); applyFormat(monoMap); track('format_mono'); break;
-        case 'z': e.preventDefault(); exec('undo'); break;
-        case 'y': e.preventDefault(); exec('redo'); break;
-      }
-    };
-    window.addEventListener('keydown', handler);
-    return () => window.removeEventListener('keydown', handler);
-  }, [applyFormat]);
-
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900 p-4">
-      <Card className="w-full max-w-3xl shadow-lg bg-white dark:bg-gray-800">
-        <CardContent className="p-6 space-y-4 text-black dark:text-white">
-          <h1 className="text-xl font-semibold">LinkedIn Post Formatter</h1>
-          <p className="text-sm text-muted-foreground">Creator tools optimized for LinkedIn reach.</p>
+    <div className="min-h-screen flex flex-col items-center justify-start bg-gray-50 p-4">
+      <Card className="w-full max-w-3xl shadow-lg">
+        <CardContent className="p-6 space-y-4">
+          <h1 className="text-xl font-semibold">LinkedIn Post Editor</h1>
 
+          {/* Toolbar */}
           <div className="flex flex-wrap gap-2">
-            <Button size="sm" variant="outline" onClick={() => { applyFormat(boldMap); track('format_bold'); }} title="Unicode Bold">B</Button>
-            <Button size="sm" variant="outline" onClick={() => { applyFormat(italicMap); track('format_italic'); }} title="Unicode Italic">I</Button>
-            <Button size="sm" variant="outline" onClick={() => { applyFormat(monoMap); track('format_mono'); }} title="Monospace">Mono</Button>
-            <Button size="sm" variant="outline" onClick={addHashtags} title="Add hashtags">#</Button>
-            <Button size="sm" variant="outline" onClick={() => setShowEmojis(v => !v)} title="Emoji picker">😊</Button>
-            <Button size="sm" variant="outline" onClick={() => exec('undo')}>Undo</Button>
-            <Button size="sm" variant="outline" onClick={() => exec('redo')}>Redo</Button>
-            <Button size="sm" variant="outline" onMouseDown={(e) => e.preventDefault()} onClick={() => exec('insertOrderedList')}>• List</Button>
-            <Button size="sm" variant="outline" onMouseDown={(e) => e.preventDefault()} onClick={() => exec('insertOrderedList')}>1. List</Button>
-            <Button size="sm" variant="outline" onClick={reset} title="Reset">⟳</Button>
-            <Button size="sm" variant="outline" onClick={toggleDarkMode} title="Toggle Dark Mode">{darkMode ? "🌙" : "☀️"}</Button>
+            <Button
+              variant="outline"
+              size="sm"
+              title="Bold"
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={() => { applyFormat(boldStyle.map, boldStyle.reverse); normalizeEditor(); track('format_bold'); }}
+            >
+              <Bold size={16} />
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              title="Italic"
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={() => { applyFormat(italicStyle.map, italicStyle.reverse); normalizeEditor(); track('format_italic'); }}
+            >
+              <Italic size={16} />
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              title="Underline"
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={() => { applyUnderline(); }}
+            >
+              <Underline size={16} />
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => { applyFormat(monoMap, italicStyle.reverse); track('format_mono'); }}
+              title="Monospace"
+            >
+              Mono
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              title="Unordered List"
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={() => applyBulletList()}
+            >
+              <List />
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              title="Ordered List"
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={() => exec("insertOrderedList")}
+            >
+              <ListOrdered />
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={addHashtags}
+              title="Add hashtags"
+            >
+              #
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => setShowEmojis(v => !v)}
+              title="Emoji picker"
+            >
+              😊
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => exec('undo')}
+              title="Undo"
+            >
+              <Undo />
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => exec('redo')}
+              title="Redo"
+            >
+              <Redo />
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={reset}
+              title="Reset"
+            >
+              <RotateCw />
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={toggleDarkMode}
+              title="Toggle Dark Mode"
+            >
+              {darkMode ? "🌙" : "☀️"}
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              title={previewMode ? "Edit Mode" : "Preview Mode"}
+              onClick={() => setPreviewMode(!previewMode)}
+            >
+              {previewMode ? <SquarePen /> : <Eye />}
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              title={copied ? "Copied!" : "Copy"}
+              onClick={copyToClipboard}
+            >
+              <Copy size={16} /> {copied ? "Copied!" : "Copy"}
+            </Button>
           </div>
 
           {/* Templates Panel */}
@@ -233,17 +452,89 @@ export default function LinkedInPostFormatter() {
             </>
           )}
 
-          <div
-            ref={editorRef}
-            contentEditable
-            suppressContentEditableWarning
-            className="editor"
-            onInput={(e: React.FormEvent<HTMLDivElement>) =>
-              setText((e.currentTarget).innerText)
-            }
-            data-placeholder="Write your LinkedIn post here..."
-          ></div>
+          <div className="relative w-full min-h-[260px]">
+            <div
+              className={`transition-opacity duration-200 ${previewMode ? "opacity-0 pointer-events-none absolute inset-0" : "opacity-100"
+                }`}
+            >
+              {/* Editor / Preview */}
+              <div
+                ref={editorRef}
+                contentEditable
+                suppressContentEditableWarning
+                className="editor w-full min-h-[220px] p-3 border rounded-md 
+                          focus:outline-none focus:ring-2 focus:ring-blue-500 
+                          whitespace-pre-wrap wordbreak-break-word overflow-y-auto"
+                data-placeholder="Write your LinkedIn post here..."
+                onInput={(e: React.FormEvent<HTMLDivElement>) => {
+                  const el = e.currentTarget;
+                  setText(el.innerText);
+                  autoResize(el);
+                }}
+              />
+            </div>
+            <div
+              className={`transition-opacity duration-200 ${previewMode ? "opacity-100" : "opacity-0 pointer-events-none absolute inset-0"
+                }`}
+            >
+              <div className="w-full min-h-[260px] p-4 border rounded-md bg-gray-50 overflow-y-auto">
+                {/* LinkedIn-style card */}
+                <div className="p-4 bg-white rounded-lg shadow-sm border border-gray-200">
+                  {/* Header */}
+                  <div className="flex items-center gap-3 mb-3">
+                    <Image
+                      src={avatar}
+                      className="w-10 h-10 rounded-full"
+                      alt="avatar"
+                      width={40} // Matches the className width
+                      height={40} // Matches the className height
+                    />
+                    <div>
+                      <p className="font-semibold text-gray-900">HiHi24x7 • 2nd</p>
+                      <p className="text-sm text-gray-500">
+                        WellBeing at Best | Helping you grow within yourself!
+                      </p>
+                      <p className="text-xs text-gray-400">12h • 🌎︎</p>
+                    </div>
+                  </div>
 
+                  {/* Post content */}
+                  <div className="text-gray-900 mb-3 whitespace-pre-wrap">
+                    {text}
+                  </div>
+
+                  {/* Reactions */}
+                  <div className="flex items-center justify-between text-sm text-gray-500 mb-3">
+                    <div className="flex items-center gap-1">
+                      <span>❤️</span>
+                      <span>57</span>
+                    </div>
+                    <div className="flex gap-2">
+                      <span>24 comments</span>
+                      <span>•</span>
+                      <span>6 reposts</span>
+                    </div>
+                  </div>
+
+                  {/* Action buttons */}
+                  <div className="flex justify-between text-gray-500 border-t border-gray-200 pt-2">
+                    <button className="flex items-center gap-1 hover:text-gray-900">
+                      Like
+                    </button>
+                    <button className="flex items-center gap-1 hover:text-gray-900">
+                      Comment
+                    </button>
+                    <button className="flex items-center gap-1 hover:text-gray-900">
+                      Repost
+                    </button>
+                    <button className="flex items-center gap-1 hover:text-gray-900">
+                      Send
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
           <div className="flex gap-2 mt-2">
             <Button size="sm" variant="outline" onClick={exportMarkdown}>Export .MD</Button>
             <Button size="sm" variant="outline" onClick={exportPDF}>Export PDF</Button>
@@ -258,7 +549,7 @@ export default function LinkedInPostFormatter() {
           </div>
 
           <div className="mt-4 text-xs text-muted-foreground text-right">
-            Built by <a href="https://github.com/YOUR_USERNAME" className="underline hover:text-blue-600" target="_blank" rel="noreferrer">BegiBa</a>
+            Built by <a href="https://github.com/BegiBa" className="underline hover:text-blue-600" target="_blank" rel="noreferrer">Began BALAKRISHNAN</a>
           </div>
         </CardContent>
       </Card>

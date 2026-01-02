@@ -125,12 +125,7 @@
 }
 
 .editor {
-  min-height: 220px;
-  padding: 12px;
-  border: 1px solid #d1d5db;
-  border-radius: 6px;
-  outline: none;
-  white-space: pre-wrap;
+  min-height: 260px;
 }
 
 .editor:empty::before {
@@ -159,4 +154,14 @@
 .editor ul,
 .editor ol {
   list-style-position: inside;
+}
+
+.editor-preview {
+  min-height: 220px;
+  padding: 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  background-color: #f9fafb;
+  white-space: pre-wrap;
+  overflow-wrap: break-word;
 }
