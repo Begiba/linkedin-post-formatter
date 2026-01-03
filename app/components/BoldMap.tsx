@@ -43,6 +43,11 @@ export const italicStyle: FormatStyle = {
   reverse: makeReverseMap(italicMap),
 };
 
+export const monoStyle: FormatStyle = {
+  map: monoMap,
+  reverse: makeReverseMap(monoMap),
+};
+
 export const underlineStyle: FormatStyle = {
   map: {},
   reverse: {},
