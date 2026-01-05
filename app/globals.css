@@ -165,3 +165,16 @@
   white-space: pre-wrap;
   overflow-wrap: break-word;
 }
+
+@media print {
+  /* Force all modern color variables to fall back to Hex/RGB */
+  :root {
+    --color-primary: #3b82f6 !important; /* Replace with your brand hex */
+    /* Add any other variables that might be using lab() */
+  }
+
+  /* Universal fallback for html2canvas parser */
+  * {
+    color-scheme: light !important;
+  }
+}

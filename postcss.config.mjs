@@ -1,6 +1,9 @@
 const config = {
   plugins: {
-    "@tailwindcss/postcss": {},
+     "@tailwindcss/postcss": {},
+    //tailwindcss: {},
+    autoprefixer: {},
+    'postcss-color-functional-notation': {}, // Converts lab() to rgb()
   },
 };
 
