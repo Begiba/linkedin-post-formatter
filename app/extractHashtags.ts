@@ -27,7 +27,9 @@ function toHashtag(phrase: string) {
 
 export function extractHashtags(text: string) {
     const cleaned = text
-        .replace(/[^\w\s]/g, "")
+        .replace(/https?:\/\/\S+/g, "") // remove URLs
+        .replace(/#\w+/g, "")           // remove existing hashtags
+        .replace(/[^\w\s]/g, "")        // remove punctuation
         .toLowerCase();
 
     const words = cleaned
@@ -51,7 +53,7 @@ export function extractHashtags2(
 
     const words = text
         .toLowerCase()
-        .replace(/https?:\/\/\S+/g, "") // remove URLs
+        .replace(/https?:\/\/\S+/g, "") // remove URLs        
         .replace(/[^\w\s]/g, "")        // remove punctuation
         .split(/\s+/);
 

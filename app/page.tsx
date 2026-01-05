@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Bold, Italic, Underline, Copy, List, ListOrdered, SquarePen, Eye, Undo, Redo, RotateCw } from "lucide-react";
+import { Bold, Italic, Underline, List, ListOrdered, SquarePen, Eye, Undo, Redo, RotateCw } from "lucide-react";
 import Image from 'next/image'
 import avatar from '../public/avatar.png';
 import { track } from "@vercel/analytics";
@@ -21,23 +21,22 @@ const emojiCategories: Record<string, string[]> = {
   Food: ["🍕", "🍔", "🍣", "🍎", "🍩"],
   // GROWTH & SUCCESS: For milestones, results, and startups
   Growth: ["🚀", "📈", "🏆", "🎯", "💯", "🔥", "💎", "🌟", "🔝", "💰"],
-  
+
   // ACTION & ATTENTION: For hooks and CTAs (Call to Actions)
   Attention: ["📢", "💡", "🚨", "✨", "👀", "👇", "👉", "🔗", "✅", "☑️", "🔲", "🔳", "⚪️", "🔘", "⚠️"],
-  
+
   // OFFICE & PROFESSIONAL: Standard business environment
   Business: ["💼", "💻", "📊", "🗓️", "📝", "🏢", "🤝", "🎙️", "📚", "🧠"],
-  
+
   // LISTS & STRUCTURE: Used instead of standard bullet points
   Structure: ["🔹", "♦️", "📍", "📌", "✔️", "❌", "▪️", "◈", "➖", "▶️", "🚩", "⚡"],
-  
+
   // PEOPLE & COMMUNITY: For networking and team wins
   People: ["😀", "😎", "🤯", "😶", "😃", "🙌", "👏", "🤝", "👥", "🗣️", "🙏", "🤳", "👩‍💻", "👨‍💼", "🥳"],
-  
+
   // CELEBRATION & POSITIVITY: For announcements
   Celebration: ["🎉", "🎊", "✨", "🎈", "🥂", "🥇", "💖", "🌈", "☀️", "✅"]
 };
-
 
 export default function LinkedInPostEditor() {
   const editorRef = useRef<HTMLDivElement | null>(null);
@@ -78,12 +77,12 @@ export default function LinkedInPostEditor() {
 
   // Capture editor state (core logic)
   // Call this before any change.
-  const saveSnapshot = () => {
+  const saveSnapshot = useCallback(() => {
     const text = editorRef.current?.innerText ?? "";
     undoStack.current.push(text);
     redoStack.current = []; // invalidate redo
     refreshUI();
-  };
+  }, []);
 
   // Restore state safely
   const restoreText = (text: string) => {
@@ -91,6 +90,7 @@ export default function LinkedInPostEditor() {
     if (!el) return;
 
     el.innerText = text;
+    setText(text);
 
     // place cursor at end
     const range = document.createRange();
@@ -129,6 +129,7 @@ export default function LinkedInPostEditor() {
     }
     refreshUI();
   }, []);
+
   // Never start editor with empty inline nodes. 
   // If editor is empty, initialize it once:
   // This ensures the cursor always lives inside a real text node.
@@ -138,20 +139,48 @@ export default function LinkedInPostEditor() {
     }
   }, []);
 
-  useEffect(() => {
-    const el = editorRef.current;
-    if (!el) return;
+  // useEffect(() => {
+  //   const el = editorRef.current;
+  //   if (!el) return;
 
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Enter" && !e.isComposing) {
-        e.preventDefault();
-        document.execCommand("insertText", false, "\n");
-      }
-    };
+  //   const handleKeyDown = (e: KeyboardEvent) => {
+  //     // Check for Enter key
+  //     if (e.key === "Enter" && !e.isComposing) {
+  //       e.preventDefault();
 
-    el.addEventListener("keydown", handleKeyDown);
-    return () => { el.removeEventListener("keydown", handleKeyDown) };
-  }, []);
+  //       const selection = window.getSelection();
+  //       const range = selection?.getRangeAt(0);
+
+  //       if (range) {
+  //         // 1. Create a <br> element
+  //         const br = document.createElement("br");
+
+  //         // 2. We also need a "Zero Width Space" or another <br> if we are at the end
+  //         // to ensure the cursor actually moves to the next line visually
+  //         const extraBr = document.createElement("br");
+
+  //         range.deleteContents();
+  //         range.insertNode(br);
+
+  //         // 3. Position the cursor AFTER the first <br>
+  //         range.setStartAfter(br);
+  //         range.setEndAfter(br);
+
+  //         // 4. Force selection update
+  //         selection?.removeAllRanges();
+  //         selection?.addRange(range);
+
+  //         // Update your state
+  //         // const text = el.innerText ?? "";
+  //         // setText(text);
+  //         // refreshUI();
+  //       }
+  //     }
+  //   };
+
+  //   // el.addEventListener("keydown", handleKeyDown);
+  //   // return () => { el.removeEventListener("keydown", handleKeyDown) };
+  // }, []);
 
   const toggleDarkMode = () => {
     setDarkMode((prev) => {
@@ -162,13 +191,13 @@ export default function LinkedInPostEditor() {
     });
   };
 
-  const normalizeEditor = () => {
+  const normalizeEditor = useCallback(() => {
     const el = editorRef.current;
     if (!el) return;
 
     const text = el.innerText; // flattens divs → \n
     el.innerText = text;
-  };
+  }, []);
 
   const isFormattedText = (
     text: string,
@@ -180,7 +209,7 @@ export default function LinkedInPostEditor() {
     return false;
   };
 
-  const transformText = (
+  const transformText = useCallback((
     text: string,
     map: Record<string, string>,
     reverseMap: Record<string, string>
@@ -193,10 +222,10 @@ export default function LinkedInPostEditor() {
       }
       return reverseMap[char] ?? char;
     }).join("");
-  };
+  }, [  ]);
 
 
-  const applyFormat = (
+  const applyFormat = useCallback((
     map: Record<string, string>,
     reverseMap: Record<string, string>
   ) => {
@@ -226,7 +255,7 @@ export default function LinkedInPostEditor() {
     range.collapse(false);
     selection.removeAllRanges();
     selection.addRange(range);
-  };
+  }, [transformText]);
 
   const toggleUnderline = (text: string) => {
     const hasUnderline = text.includes(underlineChar);
@@ -240,7 +269,7 @@ export default function LinkedInPostEditor() {
     ).join("");
   };
 
-  const applyUnderline = () => {
+  const applyUnderline = useCallback(() => {
     const selection = window.getSelection();
     if (!selection || selection.rangeCount === 0) return;
 
@@ -251,7 +280,7 @@ export default function LinkedInPostEditor() {
     range.insertNode(
       document.createTextNode(toggleUnderline(seltext))
     );
-  };
+  }, []);
 
   const replaceSelection = (
     selection: Selection,
@@ -337,27 +366,6 @@ export default function LinkedInPostEditor() {
     track('insert_emoji', { emoji });
   };
 
-  const addHashtags = () => {
-    const el = editorRef.current;
-    if (!el) return;
-    const selection = window.getSelection();
-    if (!selection || selection.rangeCount === 0) return;
-
-    const hashtext = "\n\n#technology #softwareengineering #ai";
-    const range = selection.getRangeAt(0);
-
-    range.deleteContents();
-    range.insertNode(
-      document.createTextNode(hashtext)
-    );
-    range.collapse(false);
-    selection?.removeAllRanges();
-    selection?.addRange(range);
-    setText(el.innerText);
-    autoResize(editorRef.current as HTMLDivElement);
-    track('add_hashtags');
-  };
-
   // Auto-resize editor
   const autoResize = (el: HTMLDivElement) => {
     el.style.height = "auto";
@@ -379,7 +387,7 @@ export default function LinkedInPostEditor() {
 
     // Clear editor
     el.innerText = "";
-
+    setText("");
     // Reset redo history
     redoStack.current = [];
 
@@ -485,6 +493,7 @@ export default function LinkedInPostEditor() {
     range.collapse(false);
     selection.removeAllRanges();
     selection.addRange(range);
+    refreshUI();
   }
 
 
@@ -540,24 +549,59 @@ export default function LinkedInPostEditor() {
     insertPlainText(text);
   }
 
-  const charCount = text.length;
-  const hashtagCount = (text.match(/#/g) || []).length;
-
+  const charCount = (editorRef.current?.innerText ?? "").length;
+  const hashtagCount = ((editorRef.current?.innerText ?? "").match(/#/g) || []).length;
+ 
+  // Keyboard shortcuts
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
-      if (e.ctrlKey && e.key === "z") {
-        if (undoStack.current.length === 0) return;
-        undo();
-      }
-      if (e.ctrlKey && e.key === "y") {
-        if (redoStack.current.length === 0) return;
-        redo();
+      if (!e.ctrlKey && !e.metaKey) return;
+      switch (e.key.toLowerCase()) {
+        case 'b':
+          e.preventDefault();
+          saveSnapshot();
+          if (isComposingRef.current) return;
+          applyFormat(boldStyle.map, boldStyle.reverse);
+          normalizeEditor();
+          track('format_bold');
+          break;
+        case 'i':
+          e.preventDefault();
+          saveSnapshot();
+          if (isComposingRef.current) return;
+          applyFormat(italicStyle.map, italicStyle.reverse);
+          normalizeEditor();
+          track('format_italic');
+          break;
+        case 'u':
+          e.preventDefault();
+          saveSnapshot();
+          if (isComposingRef.current) return;
+          applyUnderline();
+          track('format_underline');
+          break;
+        case 'm':
+          e.preventDefault();
+          saveSnapshot();
+          if (isComposingRef.current) return;
+          applyFormat(monoStyle.map, monoStyle.reverse);
+          track('format_mono');
+          break;
+        case 'z':
+          e.preventDefault();
+          if (undoStack.current.length === 0) return;
+          undo();
+          break;
+        case 'y':
+          e.preventDefault();
+          if (redoStack.current.length === 0) return;
+          redo();
+          break;
       }
     };
-
-    document.addEventListener("keydown", handler);
-    return () => document.removeEventListener("keydown", handler);
-  }, [undo, redo]);
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [applyFormat, applyUnderline, normalizeEditor, saveSnapshot, undo, redo]);
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-start bg-gray-50 p-4">
@@ -570,7 +614,7 @@ export default function LinkedInPostEditor() {
             <Button
               variant="outline"
               size="sm"
-              title="Bold"
+              title="Bold (Ctrl+B)/(Cmd+B)"
               onMouseDown={(e) => e.preventDefault()}
               onClick={() => {
                 saveSnapshot();
@@ -585,7 +629,7 @@ export default function LinkedInPostEditor() {
             <Button
               variant="outline"
               size="sm"
-              title="Italic"
+              title="Italic (Ctrl+I)/(Cmd+I)"
               onMouseDown={(e) => e.preventDefault()}
               onClick={() => {
                 saveSnapshot();
@@ -600,7 +644,7 @@ export default function LinkedInPostEditor() {
             <Button
               variant="outline"
               size="sm"
-              title="Underline"
+              title="Underline (Ctrl+U)/(Cmd+U)"
               onMouseDown={(e) => e.preventDefault()}
               onClick={() => {
                 saveSnapshot();
@@ -620,7 +664,7 @@ export default function LinkedInPostEditor() {
                 applyFormat(monoStyle.map, monoStyle.reverse);
                 track('format_mono');
               }}
-              title="Monospace"
+              title="Monospace (Ctrl+M)/(Cmd+M)"
             >
               Mono
             </Button>
@@ -672,7 +716,7 @@ export default function LinkedInPostEditor() {
               size="sm"
               variant="outline"
               onClick={() => undo()}
-              title="Undo"
+              title="Undo (Ctrl+Z)/(Cmd+Z)"
               disabled={!canUndo}
               className={!canUndo ? "opacity-40 cursor-not-allowed" : ""}
             >
@@ -682,7 +726,7 @@ export default function LinkedInPostEditor() {
               size="sm"
               variant="outline"
               onClick={() => redo()}
-              title="Redo"
+              title="Redo (Ctrl+Y)/(Cmd+Y)"
               disabled={!canRedo}
               className={!canRedo ? "opacity-40 cursor-not-allowed" : ""}
             >
@@ -712,14 +756,6 @@ export default function LinkedInPostEditor() {
               onClick={() => setPreviewMode(!previewMode)}
             >
               {previewMode ? <SquarePen /> : <Eye />}
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              title={copied ? "Copied!" : "Copy"}
-              onClick={copyToClipboard}
-            >
-              <Copy size={16} /> {copied ? "Copied!" : "Copy"}
             </Button>
           </div>
 
@@ -886,6 +922,7 @@ export default function LinkedInPostEditor() {
           <div className="mt-4 text-xs text-muted-foreground text-right">
             Built by <a href="https://github.com/BegiBa" className="underline hover:text-blue-600" target="_blank" rel="noreferrer">Began BALAKRISHNAN</a>
             {/* https://www.linkedin.com/in/began-balakrishnan-0a20b221/ */}
+            {/* https://github.com/BegiBa */}
           </div>
         </CardContent>
       </Card>
