@@ -7,7 +7,10 @@ import { Bold, Italic, Underline, List, ListOrdered, SquarePen, Eye, Undo, Redo,
 import Image from 'next/image'
 import avatar from '../public/avatar.png';
 import { track } from "@vercel/analytics";
-import { monoStyle, boldStyle, italicStyle } from "./components/BoldMap";
+import { boldStyle } from "./components/boldMap";
+import { italicStyle } from "./components/italicMap";
+import { monoStyle } from "./components/monoMap";
+import { underlineChar } from "./components/underlineMap";
 import { useHashtagSuggestions } from "./useHashtagSuggestions";
 // const templates = [
 //   { title: "Weekly Learnings", content: "This week I learned some amazing lessons:\n1. \n2. \n3. \n#learning #growth" },
@@ -50,7 +53,7 @@ export default function LinkedInPostEditor() {
     if (saved) document.documentElement.classList.add("dark");
     return saved;
   });
-  const underlineChar = "\u0332";
+
 
   const BULLET = "•";
   const NUMBER_REGEX = /^\d+\.\s+/;
@@ -139,49 +142,6 @@ export default function LinkedInPostEditor() {
     }
   }, []);
 
-  // useEffect(() => {
-  //   const el = editorRef.current;
-  //   if (!el) return;
-
-  //   const handleKeyDown = (e: KeyboardEvent) => {
-  //     // Check for Enter key
-  //     if (e.key === "Enter" && !e.isComposing) {
-  //       e.preventDefault();
-
-  //       const selection = window.getSelection();
-  //       const range = selection?.getRangeAt(0);
-
-  //       if (range) {
-  //         // 1. Create a <br> element
-  //         const br = document.createElement("br");
-
-  //         // 2. We also need a "Zero Width Space" or another <br> if we are at the end
-  //         // to ensure the cursor actually moves to the next line visually
-  //         const extraBr = document.createElement("br");
-
-  //         range.deleteContents();
-  //         range.insertNode(br);
-
-  //         // 3. Position the cursor AFTER the first <br>
-  //         range.setStartAfter(br);
-  //         range.setEndAfter(br);
-
-  //         // 4. Force selection update
-  //         selection?.removeAllRanges();
-  //         selection?.addRange(range);
-
-  //         // Update your state
-  //         // const text = el.innerText ?? "";
-  //         // setText(text);
-  //         // refreshUI();
-  //       }
-  //     }
-  //   };
-
-  //   // el.addEventListener("keydown", handleKeyDown);
-  //   // return () => { el.removeEventListener("keydown", handleKeyDown) };
-  // }, []);
-
   const toggleDarkMode = () => {
     setDarkMode((prev) => {
       const next = !prev;
@@ -222,7 +182,7 @@ export default function LinkedInPostEditor() {
       }
       return reverseMap[char] ?? char;
     }).join("");
-  }, [  ]);
+  }, []);
 
 
   const applyFormat = useCallback((
@@ -237,12 +197,6 @@ export default function LinkedInPostEditor() {
     const range = selection.getRangeAt(0);
     const selectedText = selection.toString();
     const formatted = transformText(selectedText, map, reverseMap);
-    // const formatted = selectedText
-    //   .split(/\r?\n/)
-    //   .map(line =>
-    //     [...line].map(c => map[c] ?? c).join("")
-    //   )
-    //   .join("\n");
 
     range.deleteContents();
     const node = document.createTextNode(formatted);
@@ -441,7 +395,6 @@ export default function LinkedInPostEditor() {
 
     document.body.appendChild(tempContainer);
 
-    console.log(tempContainer);
     html2pdf()
       .set({
         margin: 0.5,
@@ -471,6 +424,7 @@ export default function LinkedInPostEditor() {
   };
 
   function insertPlainText(text: string) {
+    
     const selection = window.getSelection();
     if (!selection || selection.rangeCount === 0) return;
 
@@ -493,6 +447,9 @@ export default function LinkedInPostEditor() {
     range.collapse(false);
     selection.removeAllRanges();
     selection.addRange(range);
+    setText(text);
+    const el = editorRef.current;
+    autoResize(el as HTMLDivElement);
     refreshUI();
   }
 
@@ -525,7 +482,6 @@ export default function LinkedInPostEditor() {
   const lastText = useRef("");
 
   const onInput = (e: React.FormEvent<HTMLDivElement>) => {
-    console.log("INPUT HANDLER CALLED");
     const el = e.currentTarget;
     const text = editorRef.current?.innerText ?? "";
     if (text !== lastText.current) {
@@ -538,7 +494,6 @@ export default function LinkedInPostEditor() {
   };
 
   function handlePaste(e: React.ClipboardEvent<HTMLDivElement>) {
-    console.log("PASTE HANDLER CALLED");
     e.preventDefault();
     e.stopPropagation();
 
@@ -547,14 +502,54 @@ export default function LinkedInPostEditor() {
       e.clipboardData.getData("text");
 
     insertPlainText(text);
+
   }
 
-  const charCount = (editorRef.current?.innerText ?? "").length;
+  const charCount = Array.from((editorRef.current?.innerText ?? "")).length;
   const hashtagCount = ((editorRef.current?.innerText ?? "").match(/#/g) || []).length;
- 
+
   // Keyboard shortcuts
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
+      // if (e.key === "Enter" && !e.isComposing) {
+      //   e.preventDefault();
+      //   const selection = window.getSelection();
+      //   if (!selection || selection.rangeCount === 0) return;
+
+      //   const range = selection.getRangeAt(0);
+      //   range.deleteContents();
+
+      //   const br = document.createElement("br");
+      //   range.insertNode(br);
+
+      //   // Create a new range to move the cursor
+      //   const newRange = document.createRange();
+      //   newRange.setStartAfter(br);
+      //   newRange.setEndAfter(br);
+
+      //   selection.removeAllRanges();
+      //   selection.addRange(newRange);
+
+      //   /**
+      //    * THE TRICK:
+      //    * If there is no content after the cursor, we add a second "phantom" <br>.
+      //    * This makes the empty space selectable and visible.
+      //    */
+      //   const isAtEnd = !br.nextSibling ||
+      //     (br.nextSibling instanceof HTMLBRElement && !br.nextSibling.nextSibling);
+
+      //   if (isAtEnd) {
+      //     const phantomBr = document.createElement("br");
+      //     br.after(phantomBr);
+      //     // We do NOT move the cursor after the phantom. 
+      //     // The cursor stays between the two <br> tags.
+      //   }
+
+      //   // Scroll the cursor into view (essential for long posts)
+      //   editorRef.current?.blur();
+      //   editorRef.current?.focus();
+      //   return;
+      // }
       if (!e.ctrlKey && !e.metaKey) return;
       switch (e.key.toLowerCase()) {
         case 'b':
@@ -671,7 +666,7 @@ export default function LinkedInPostEditor() {
             <Button
               variant="outline"
               size="sm"
-              title="Unordered List"
+              title="• List"
               onMouseDown={(e) => e.preventDefault()}
               onClick={() => {
                 saveSnapshot();
@@ -685,7 +680,7 @@ export default function LinkedInPostEditor() {
             <Button
               variant="outline"
               size="sm"
-              title="Ordered List"
+              title="1 List"
               onMouseDown={(e) => e.preventDefault()}
               onClick={() => {
                 saveSnapshot();
@@ -773,14 +768,14 @@ export default function LinkedInPostEditor() {
                 </Button>
             ))}
           </div> */}
-          {/* hashtag Panel */}
+          {/* hashtag Panel className="px-2 py-1 text-sm bg-gray-100 rounded hover:bg-blue-100"*/}
           {hashtags.length > 0 && (
             <div className="mt-3 flex flex-wrap gap-2">
               {hashtags.map(tag => (
                 <button
                   key={tag}
                   type="button"
-                  className="px-2 py-1 text-sm bg-gray-100 rounded hover:bg-blue-100"
+                  className="px-2 py-1 text-sm bg-gray-100 dark:bg-white-100 dark:text-black rounded hover:bg-blue-100"
                   onClick={() => {
                     editorRef.current?.focus();
                     if (isComposingRef.current) return;
@@ -825,7 +820,7 @@ export default function LinkedInPostEditor() {
               {/* Editor / Preview */}
               <div
                 ref={editorRef}
-                contentEditable
+                contentEditable="plaintext-only"
                 suppressContentEditableWarning
                 className="editor w-full min-h-[220px] p-3 border rounded-md 
                           focus:outline-none focus:ring-2 focus:ring-blue-500 
